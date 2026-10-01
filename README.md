@@ -30,6 +30,19 @@ La base de datos corre en Postgres con Docker, así no hay que instalar nada má
 
 Todo lo cargo como texto, tal cual viene en los archivos, porque quiero que la limpieza quede hecha en SQL y no en Python.
 
+## Limpieza en SQL
+
+La limpieza está en la carpeta `sql/`, en archivos numerados que se corren en orden:
+
+- `01_catalogos.sql`: quita los repetidos de los catálogos y corrige el código de PFCEMARGOS.
+- `02_macroactivos.sql`: limpia el portafolio local. Quita duplicados, separa las filas con problemas en una tabla de rechazadas, corrige el código de Fiducuenta y arregla los valores que se duplican o pierden un dígito un solo día (comparando con el día anterior y el siguiente).
+- `03_internacional.sql`: limpia el portafolio internacional y le pone a cada activo su tipo (bono, fondo, acción, etc.), porque el archivo no lo trae.
+- `04_portafolios.sql`: crea las vistas con el portafolio de cada cliente a su última fecha, que es lo que usa la aplicación.
+
+Las filas que no pude usar no las borro, quedan en las tablas `rechazadas_macroactivos` (51 filas) y `rechazadas_internacional` (3 filas) con el motivo.
+
+Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 millones de pesos al 15 de mayo de 2024) y 12 de ellos también tienen portafolio internacional (unos 8,8 millones de dólares al 30 de mayo de 2024).
+
 ## Cómo correr el proyecto
 
 1. Poner los 5 archivos `.csv` en una carpeta `data/`.
@@ -37,12 +50,13 @@ Todo lo cargo como texto, tal cual viene en los archivos, porque quiero que la l
 3. Instalar las librerías: `pip install -r requirements.txt`
 4. Levantar la base de datos: `docker compose up -d`
 5. Cargar los datos: `python scripts/cargar_datos.py`
+6. Correr la limpieza: `python scripts/ejecutar_sql.py`
 
 ## Avance
 
 - [x] Exploración de los datos
 - [x] Base de datos y carga
-- [ ] Limpieza en SQL
+- [x] Limpieza en SQL
 - [ ] Aplicación en Django
 - [ ] Modelo
 
