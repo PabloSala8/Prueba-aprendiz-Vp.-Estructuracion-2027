@@ -6,7 +6,8 @@ SELECT
     m.id_sistema_cliente,
     m.fecha,
     m.macroactivo,
-    COALESCE(a.activo, 'No identificado') AS activo,
+    -- los activos que no están en el catálogo se muestran como No identificado
+    COALESCE(a.activo, 'No identificado' || COALESCE(' (' || m.cod_activo || ')', '')) AS activo,
     m.aba,
     b.banca,
     p.perfil_riesgo
