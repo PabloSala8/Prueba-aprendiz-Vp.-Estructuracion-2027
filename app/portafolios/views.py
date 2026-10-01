@@ -17,6 +17,10 @@ TABLAS = [
     "v_portafolio_local",
     "v_portafolio_internacional",
     "v_clientes",
+    "precios_mercado",
+    "v_volatilidad_tickers",
+    "v_posiciones_riesgo",
+    "v_modelo_riesgo",
 ]
 
 
@@ -148,4 +152,50 @@ def portafolio(request):
         # alto de cada gráfico según el número de barras
         "alto_local": 70 + 38 * len(local),
         "alto_internacional": 70 + 38 * len(internacional_por_tipo),
+    })
+
+
+def riesgo(request):
+    """Página del modelo: riesgo de cada portafolio comparado con el perfil del cliente."""
+    hay_precios = consultar("SELECT COUNT(*) AS filas FROM precios_mercado")[0]["filas"] > 0
+
+    clientes = []
+    resumen = []
+    detalle = []
+    id_cliente = request.GET.get("cliente")
+
+    if hay_precios:
+        clientes = consultar("SELECT * FROM v_modelo_riesgo ORDER BY volatilidad DESC")
+
+        resumen = consultar("""
+            SELECT resultado, COUNT(*) AS clientes
+            FROM v_modelo_riesgo
+            GROUP BY resultado
+            ORDER BY clientes DESC
+        """)
+
+        # Detalle de un cliente: cada posición con su peso y la volatilidad que se le asignó
+        if id_cliente:
+            detalle = consultar("""
+                SELECT portafolio, nombre, clase, ticker, fuente,
+                       ROUND(100 * valor_cop / SUM(valor_cop) OVER (), 1) AS peso,
+                       ROUND((volatilidad * 100)::numeric, 1) AS volatilidad
+                FROM v_posiciones_riesgo
+                WHERE id_sistema_cliente = %s
+                ORDER BY valor_cop DESC
+            """, [id_cliente])
+
+    grafico = {
+        "etiquetas": [fila["id_sistema_cliente"] for fila in clientes],
+        "valores": [float(fila["volatilidad"]) for fila in clientes],
+    }
+
+    return render(request, "portafolios/riesgo.html", {
+        "hay_precios": hay_precios,
+        "clientes": clientes,
+        "resumen": resumen,
+        "id_cliente": id_cliente,
+        "detalle": detalle,
+        "grafico": grafico,
+        "alto_grafico": 70 + 22 * len(clientes),
     })

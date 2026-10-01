@@ -45,12 +45,34 @@ Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 mill
 
 ## Aplicación en Django
 
-La aplicación está en la carpeta `app/` y se conecta a la misma base de datos. Tiene dos páginas:
+La aplicación está en la carpeta `app/` y se conecta a la misma base de datos. Tiene estas páginas:
 
 - **Consultas SQL:** muestra los archivos de la carpeta `sql/`, deja ver el SQL de cada uno y ejecutarlos con un botón. También muestra cuántas filas tiene cada tabla resultante y sus primeras filas.
 - **Portafolio por cliente:** se elige un cliente y muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle.
+- **Riesgo vs perfil:** muestra el resultado del modelo (explicado más abajo).
 
 Los gráficos están hechos con Chart.js, que es de código abierto. Las consultas que usa la página (totales y porcentajes) también están escritas en SQL.
+
+## Modelo: riesgo del portafolio vs perfil del cliente
+
+En la exploración vi que hay clientes con mucha plata invertida y con el perfil de riesgo sin definir, así que quise revisar si el riesgo que de verdad tiene cada portafolio va de acuerdo con el perfil que el cliente tiene registrado.
+
+Cómo lo hice:
+
+1. Descargué de Yahoo Finance un año de precios de los activos de los portafolios (`scripts/descargar_precios.py`), incluyendo las acciones colombianas.
+2. Con esos precios calculé la volatilidad anual de cada activo. Para los activos que no tienen precio en bolsa (bonos, fondos, notas estructuradas) usé un ETF parecido.
+3. El riesgo del portafolio es el promedio de esas volatilidades según el peso de cada posición, sumando lo local y lo internacional.
+4. Menos de 5% lo tomo como conservador, entre 5% y 10% como moderado y más de 10% como agresivo, y eso lo comparo con el perfil registrado.
+
+Todo el cálculo está en `sql/05_modelo_riesgo.sql` y el resultado se ve en la página "Riesgo vs perfil" de la aplicación.
+
+Lo que encontré: de los 29 clientes, 15 no tienen perfil definido (el modelo les sugiere uno), 3 tienen más riesgo del que dice su perfil, 6 tienen menos y 5 están alineados.
+
+Cosas a tener en cuenta:
+
+- Los FICs y CDTs locales no tienen precio en bolsa, así que les puse una volatilidad baja como supuesto (2% y 1%).
+- El promedio ponderado no tiene en cuenta que los activos se compensan entre sí (diversificación), entonces el riesgo queda un poco más alto de lo real.
+- Los límites de 5% y 10% los escogí yo comparando con ETFs de bonos y de acciones. Se pueden cambiar en el SQL.
 
 ## Cómo correr el proyecto
 
@@ -60,9 +82,10 @@ Los gráficos están hechos con Chart.js, que es de código abierto. Las consult
 4. Levantar la base de datos: `docker compose up -d`
 5. Cargar los datos: `python scripts/cargar_datos.py`
 6. Correr la limpieza: `python scripts/ejecutar_sql.py`
-7. Entrar a la carpeta de la aplicación: `cd app`
-8. Crear las tablas que necesita Django: `python manage.py migrate`
-9. Abrir la aplicación: `python manage.py runserver` y entrar a http://127.0.0.1:8000
+7. Descargar los precios de mercado (necesita internet): `python scripts/descargar_precios.py`
+8. Entrar a la carpeta de la aplicación: `cd app`
+9. Crear las tablas que necesita Django: `python manage.py migrate`
+10. Abrir la aplicación: `python manage.py runserver` y entrar a http://127.0.0.1:8000
 
 ## Avance
 
@@ -70,6 +93,6 @@ Los gráficos están hechos con Chart.js, que es de código abierto. Las consult
 - [x] Base de datos y carga
 - [x] Limpieza en SQL
 - [x] Aplicación en Django
-- [ ] Modelo
+- [x] Modelo
 
 Los datos de la prueba no están en el repositorio.
