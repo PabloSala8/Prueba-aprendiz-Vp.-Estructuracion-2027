@@ -43,6 +43,15 @@ Las filas que no pude usar no las borro, quedan en las tablas `rechazadas_macroa
 
 Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 millones de pesos al 15 de mayo de 2024) y 12 de ellos también tienen portafolio internacional (unos 8,8 millones de dólares al 30 de mayo de 2024).
 
+## Aplicación en Django
+
+La aplicación está en la carpeta `app/` y se conecta a la misma base de datos. Tiene dos páginas:
+
+- **Consultas SQL:** muestra los archivos de la carpeta `sql/`, deja ver el SQL de cada uno y ejecutarlos con un botón. También muestra cuántas filas tiene cada tabla resultante y sus primeras filas.
+- **Portafolio por cliente:** se elige un cliente y muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle.
+
+Los gráficos están hechos con Chart.js, que es de código abierto. Las consultas que usa la página (totales y porcentajes) también están escritas en SQL.
+
 ## Cómo correr el proyecto
 
 1. Poner los 5 archivos `.csv` en una carpeta `data/`.
@@ -51,13 +60,16 @@ Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 mill
 4. Levantar la base de datos: `docker compose up -d`
 5. Cargar los datos: `python scripts/cargar_datos.py`
 6. Correr la limpieza: `python scripts/ejecutar_sql.py`
+7. Entrar a la carpeta de la aplicación: `cd app`
+8. Crear las tablas que necesita Django: `python manage.py migrate`
+9. Abrir la aplicación: `python manage.py runserver` y entrar a http://127.0.0.1:8000
 
 ## Avance
 
 - [x] Exploración de los datos
 - [x] Base de datos y carga
 - [x] Limpieza en SQL
-- [ ] Aplicación en Django
+- [x] Aplicación en Django
 - [ ] Modelo
 
 Los datos de la prueba no están en el repositorio.

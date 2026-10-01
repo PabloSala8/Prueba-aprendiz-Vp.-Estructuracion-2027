@@ -1,0 +1,71 @@
+{% extends "portafolios/base.html" %}
+
+{% block titulo %}Consultas SQL{% endblock %}
+
+{% block contenido %}
+<h1 class="h3">Consultas SQL</h1>
+<p class="text-muted">
+    Estos son los archivos de la carpeta <code>sql/</code> que limpian los datos y arman los portafolios.
+    Se ejecutan en orden. Si se ejecuta uno solo de los tres primeros, hay que volver a ejecutar el
+    <code>04_portafolios.sql</code> porque las vistas dependen de esas tablas.
+</p>
+
+{% if mensaje %}<div class="alert alert-success">{{ mensaje }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">Error: {{ error }}</div>{% endif %}
+
+<form method="post" class="mb-3">
+    {% csrf_token %}
+    <button class="btn btn-primary" name="archivo" value="todos">Ejecutar todos en orden</button>
+</form>
+
+{% for archivo in archivos %}
+<div class="card mb-2">
+    <div class="card-body">
+        <form method="post" class="d-flex justify-content-between align-items-center">
+            {% csrf_token %}
+            <div>
+                <strong>{{ archivo.nombre }}</strong><br>
+                <span class="text-muted">{{ archivo.descripcion }}</span>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" name="archivo" value="{{ archivo.nombre }}">Ejecutar</button>
+        </form>
+        <details class="mt-2">
+            <summary>Ver el SQL</summary>
+            <pre class="bg-light border rounded p-3 mt-2 small">{{ archivo.contenido }}</pre>
+        </details>
+    </div>
+</div>
+{% endfor %}
+
+<h2 class="h4 mt-5">Tablas y vistas resultantes</h2>
+<table class="table table-sm bg-white border" style="max-width: 520px;">
+    <thead>
+        <tr><th>Tabla o vista</th><th class="text-end">Filas</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for tabla in tablas %}
+        <tr>
+            <td><code>{{ tabla.nombre }}</code></td>
+            <td class="text-end">{% if tabla.filas is None %}no existe{% else %}{{ tabla.filas }}{% endif %}</td>
+            <td class="text-end">{% if tabla.filas is not None %}<a href="?tabla={{ tabla.nombre }}#vista-previa">ver</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if vista_previa %}
+<h2 class="h4 mt-4" id="vista-previa">Primeras 20 filas de <code>{{ tabla_elegida }}</code></h2>
+<div class="table-responsive">
+    <table class="table table-sm table-striped bg-white border small">
+        <thead>
+            <tr>{% for columna in vista_previa.0.keys %}<th>{{ columna }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+            {% for fila in vista_previa %}
+            <tr>{% for valor in fila.values %}<td>{{ valor|default_if_none:"" }}</td>{% endfor %}</tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

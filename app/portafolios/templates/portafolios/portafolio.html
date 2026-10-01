@@ -1,0 +1,160 @@
+{% extends "portafolios/base.html" %}
+
+{% block titulo %}Portafolio por cliente{% endblock %}
+
+{% block contenido %}
+<h1 class="h3">Portafolio por cliente</h1>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-auto">
+        <select name="cliente" class="form-select" onchange="this.form.submit()">
+            <option value="">Seleccione un cliente</option>
+            {% for c in clientes %}
+            <option value="{{ c.id_sistema_cliente }}" {% if c.id_sistema_cliente == id_cliente %}selected{% endif %}>
+                {{ c.id_sistema_cliente }} · {{ c.banca }} · {{ c.perfil_riesgo }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+{% if not id_cliente %}
+<p class="text-muted">Elija un cliente de la lista para ver su portafolio.</p>
+{% elif not cliente %}
+<div class="alert alert-warning">No se encontró el cliente {{ id_cliente }}.</div>
+{% else %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Banca</div>
+            <div class="fs-5">{{ cliente.banca|default:"Sin dato" }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Perfil de riesgo</div>
+            <div class="fs-5">{{ cliente.perfil_riesgo }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Portafolio local</div>
+            <div class="fs-5">$ {{ cliente.total_cop|floatformat:"0g" }} COP</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Portafolio internacional</div>
+            <div class="fs-5">$ {{ cliente.total_usd|floatformat:"0g" }} USD</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+            <h2 class="h5 mb-0">Portafolio local (COP)</h2>
+            {% if local %}
+            <p class="text-muted small">Saldo por activo al {{ cliente.fecha_local|date:"j \d\e F \d\e Y" }}</p>
+            <div style="height: {{ alto_local }}px;"><canvas id="grafico-local"></canvas></div>
+            <table class="table table-sm mt-3 small">
+                <thead>
+                    <tr><th>Activo</th><th>Macroactivo</th><th class="text-end">Saldo (COP)</th><th class="text-end">%</th></tr>
+                </thead>
+                <tbody>
+                    {% for fila in local %}
+                    <tr>
+                        <td>{{ fila.activo }}</td>
+                        <td>{{ fila.macroactivo }}</td>
+                        <td class="text-end">{{ fila.aba|floatformat:"0g" }}</td>
+                        <td class="text-end">{{ fila.porcentaje }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mt-2">Este cliente no tiene portafolio local.</p>
+            {% endif %}
+        </div></div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+            <h2 class="h5 mb-0">Portafolio internacional (USD)</h2>
+            {% if internacional %}
+            <p class="text-muted small">Valor de mercado por tipo de activo al {{ cliente.fecha_internacional|date:"j \d\e F \d\e Y" }}</p>
+            <div style="height: {{ alto_internacional }}px;"><canvas id="grafico-internacional"></canvas></div>
+            <table class="table table-sm mt-3 small">
+                <thead>
+                    <tr><th>Activo</th><th>Tipo</th><th>Vence</th><th class="text-end">Valor (USD)</th><th class="text-end">%</th></tr>
+                </thead>
+                <tbody>
+                    {% for fila in internacional %}
+                    <tr>
+                        <td>{{ fila.nombre_activo|truncatechars:45 }}</td>
+                        <td>{{ fila.tipo_activo }}</td>
+                        <td>{{ fila.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td class="text-end">{{ fila.valor_mercado|floatformat:"0g" }}</td>
+                        <td class="text-end">{{ fila.porcentaje }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mt-2">Este cliente no tiene portafolio internacional.</p>
+            {% endif %}
+        </div></div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ graficos|json_script:"datos-graficos" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const datos = JSON.parse(document.getElementById("datos-graficos").textContent);
+
+    // Gráfico de barras horizontales con los valores de mayor a menor
+    function graficoBarras(idCanvas, etiquetas, valores, moneda) {
+        const canvas = document.getElementById(idCanvas);
+        if (!canvas) return;
+
+        new Chart(canvas, {
+            type: "bar",
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: "#2a78d6",
+                    borderRadius: 4,
+                    maxBarThickness: 24,
+                }],
+            },
+            options: {
+                indexAxis: "y",
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (punto) => punto.parsed.x.toLocaleString("es-CO", { maximumFractionDigits: 0 }) + " " + moneda,
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: moneda },
+                        ticks: { callback: (valor) => valor.toLocaleString("es-CO", { notation: "compact" }) },
+                    },
+                    y: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    graficoBarras("grafico-local", datos.local.etiquetas, datos.local.valores, "COP");
+    graficoBarras("grafico-internacional", datos.internacional.etiquetas, datos.internacional.valores, "USD");
+</script>
+{% endblock %}

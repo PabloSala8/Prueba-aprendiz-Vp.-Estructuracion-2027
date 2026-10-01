@@ -5,3 +5,4 @@ jupyter
 sqlalchemy
 psycopg2-binary
 python-dotenv
+django
