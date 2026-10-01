@@ -1,0 +1,20 @@
+# Datos de la prueba (no se suben)
+data/
+
+# Enunciado de la prueba
+*.docx
+~$*
+
+# Entorno y credenciales
+env/
+.env
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+/*.html
+notebooks/*.html
+
+# Mac
+.DS_Store
