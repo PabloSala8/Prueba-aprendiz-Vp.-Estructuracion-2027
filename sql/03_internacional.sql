@@ -48,7 +48,8 @@ SELECT
         WHEN UPPER(nombre_activo) LIKE '%LKD%' OR UPPER(nombre_activo) LIKE '%LNKD%' THEN 'Nota estructurada'
         WHEN fecha_vencimiento <> '1/01/1900' AND UPPER(nombre_activo) LIKE '%TREAS%' THEN 'Bono del Tesoro EE.UU.'
         WHEN fecha_vencimiento <> '1/01/1900' THEN 'Bono'
-        WHEN UPPER(nombre_activo) LIKE '%ETF%' OR UPPER(nombre_activo) LIKE '%ISHARES%'
+        -- ' ETF' con espacio antes, porque NETFLIX también contiene las letras ETF
+        WHEN UPPER(nombre_activo) LIKE '% ETF%' OR UPPER(nombre_activo) LIKE '%ISHARES%'
           OR UPPER(nombre_activo) LIKE '%SPDR%' OR UPPER(nombre_activo) LIKE '%VANGUARD%' THEN 'ETF'
         WHEN isin LIKE 'LU%' OR isin LIKE 'IE%' THEN 'Fondo mutuo'
         ELSE 'Acción'
