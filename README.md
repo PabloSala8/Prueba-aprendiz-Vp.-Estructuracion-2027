@@ -13,9 +13,20 @@ Para eso la prueba pide:
 3. Hacer una aplicación en Django para ver el portafolio de cada cliente.
 4. Construir un modelo que aporte algo más sobre los clientes, usando datos de mercado.
 
+## Exploración de los datos
+
+Antes de tocar la base de datos revisé los archivos en un notebook (`notebooks/01_eda.ipynb`) para saber qué problemas traían. Lo principal que encontré:
+
+- Cerca del 10% de las filas de los históricos están repetidas.
+- Hay unas pocas filas con los valores corridos de columna. No las reparo, las separo.
+- El código `10007` es en realidad Fiducuenta (`1007`) y PFCEMARGOS aparece en los datos como `1015`, no como `1115`.
+- Varios IDs de cliente vienen en notación científica (`1.00114E+12`) y no se pueden recuperar.
+- En el archivo internacional, la carga del 1 de marzo trae cada posición muchas veces, así que solo sirve la última carga de cada cliente.
+- El portafolio internacional pesa mucho más que el local (cerca del 87% del total).
+
 ## Avance
 
-- [ ] Exploración de los datos
+- [x] Exploración de los datos
 - [ ] Base de datos y carga
 - [ ] Limpieza en SQL
 - [ ] Aplicación en Django

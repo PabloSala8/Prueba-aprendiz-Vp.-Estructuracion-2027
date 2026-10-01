@@ -5,6 +5,9 @@ data/
 *.docx
 ~$*
 
+# Borrador viejo de la exploración
+eda_prueba_analitica_inversiones.ipynb
+
 # Entorno y credenciales
 env/
 .env
