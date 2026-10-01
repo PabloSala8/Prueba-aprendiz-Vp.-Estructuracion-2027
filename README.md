@@ -24,12 +24,26 @@ Antes de tocar la base de datos revisé los archivos en un notebook (`notebooks/
 - En el archivo internacional, la carga del 1 de marzo trae cada posición muchas veces, así que solo sirve la última carga de cada cliente.
 - El portafolio internacional pesa mucho más que el local (cerca del 87% del total).
 
+## Base de datos y carga
+
+La base de datos corre en Postgres con Docker, así no hay que instalar nada más. El script `scripts/cargar_datos.py` recorre la carpeta `data/`, crea una tabla por cada archivo con el mismo nombre y carga los datos.
+
+Todo lo cargo como texto, tal cual viene en los archivos, porque quiero que la limpieza quede hecha en SQL y no en Python.
+
+## Cómo correr el proyecto
+
+1. Poner los 5 archivos `.csv` en una carpeta `data/`.
+2. Copiar `.env.example` como `.env`.
+3. Instalar las librerías: `pip install -r requirements.txt`
+4. Levantar la base de datos: `docker compose up -d`
+5. Cargar los datos: `python scripts/cargar_datos.py`
+
 ## Avance
 
 - [x] Exploración de los datos
-- [ ] Base de datos y carga
+- [x] Base de datos y carga
 - [ ] Limpieza en SQL
 - [ ] Aplicación en Django
 - [ ] Modelo
 
-Los datos de la prueba no están en el repositorio. Para correr el proyecto hay que poner los 5 archivos `.csv` en una carpeta `data/`.
+Los datos de la prueba no están en el repositorio.
