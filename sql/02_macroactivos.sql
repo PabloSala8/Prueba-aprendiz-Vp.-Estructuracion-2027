@@ -32,9 +32,14 @@ WITH con_tipos AS (
     -- paso los textos a fechas y números y corrijo los códigos
     SELECT
         make_date(ingestion_year::int, ingestion_month::int, ingestion_day::int) AS fecha,
-        -- este ID viene con un cero menos una sola vez
-        CASE WHEN id_sistema_cliente = '1002203023' THEN '10020203023'
-             ELSE id_sistema_cliente END AS id_sistema_cliente,
+        CASE
+            -- este ID viene con un cero menos una sola vez
+            WHEN id_sistema_cliente = '1002203023' THEN '10020203023'
+            -- único ID en notación científica que pude recuperar: una de las filas rechazadas
+            -- trae el ID completo partido en dos columnas (100 + 890112256)
+            WHEN id_sistema_cliente = '1.0089E+11' THEN '100890112256'
+            ELSE id_sistema_cliente
+        END AS id_sistema_cliente,
         macroactivo,
         -- 10007 es Fiducuenta (1007) con un cero de más
         CASE WHEN cod_activo = '10007' THEN '1007'

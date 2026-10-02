@@ -20,7 +20,8 @@ Antes de tocar la base de datos revisé los archivos en un notebook (`notebooks/
 - Cerca del 10% de las filas de los históricos están repetidas.
 - Hay unas pocas filas con los valores corridos de columna. No las reparo, las separo.
 - El código `10007` es en realidad Fiducuenta (`1007`) y PFCEMARGOS aparece en los datos como `1015`, no como `1115`.
-- Varios IDs de cliente vienen en notación científica (`1.00114E+12`) y no se pueden recuperar.
+- Varios IDs de cliente vienen en notación científica (`1.00114E+12`) porque el archivo pasó por Excel y los últimos dígitos se perdieron. Solo pude recuperar uno, gracias a una fila que traía el ID completo. Los otros 10 quedan incompletos: lo correcto sería pedir el archivo de nuevo con el ID como texto.
+- Uno de esos IDs incompletos (`1.00114E+12`) tiene dos perfiles de riesgo distintos, así que probablemente son dos clientes que quedaron con el mismo número. Lo dejo como uno solo porque no lo puedo comprobar.
 - En el archivo internacional, la carga del 1 de marzo trae cada posición muchas veces, así que solo sirve la última carga de cada cliente.
 - El portafolio internacional pesa mucho más que el local (cerca del 87% del total).
 
