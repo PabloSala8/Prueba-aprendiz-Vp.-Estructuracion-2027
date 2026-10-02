@@ -75,6 +75,20 @@ Cosas a tener en cuenta:
 - El promedio ponderado no tiene en cuenta que los activos se compensan entre sí (diversificación), entonces el riesgo queda un poco más alto de lo real.
 - Los límites de 5% y 10% los escogí yo comparando con ETFs de bonos y de acciones. Se pueden cambiar en el SQL.
 
+## Extra: resumen y oportunidades por cliente
+
+Como la idea de la herramienta es ayudar a generar nuevos negocios, al final de la página de cada cliente agregué un resumen del portafolio y una lista de oportunidades. Salen de reglas sencillas sobre los datos (`sql/06_indicadores.sql` y `app/portafolios/recomendaciones.py`):
+
+- Clientes sin perfil de riesgo: se les estima uno con el modelo, según los activos que tienen.
+- Clientes con más o con menos riesgo del que dice su perfil.
+- Posiciones internacionales que vencen en los 6 meses siguientes a la fecha de corte.
+- Mucha plata en liquidez (en empresas se muestra como excedentes de tesorería).
+- Portafolios concentrados en un solo activo.
+- Clientes de Banca Personal con montos altos, que podrían atenderse en otra banca.
+- Personas con portafolios grandes que no tienen nada en el exterior, y portafolios muy pequeños.
+
+Los límites de cada regla (por ejemplo, desde qué porcentaje la liquidez es "alta") son supuestos míos y están al inicio de `recomendaciones.py`. Son ideas para la conversación con el cliente, no recomendaciones de inversión.
+
 ## Cómo correr el proyecto
 
 1. Poner los 5 archivos `.csv` en una carpeta `data/`.
@@ -95,5 +109,6 @@ Cosas a tener en cuenta:
 - [x] Limpieza en SQL
 - [x] Aplicación en Django
 - [x] Modelo
+- [x] Extra: resumen y oportunidades por cliente
 
 Los datos de la prueba no están en el repositorio.

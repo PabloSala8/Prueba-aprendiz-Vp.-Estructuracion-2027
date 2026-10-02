@@ -43,6 +43,12 @@
         <div class="card h-100"><div class="card-body">
             <div class="text-muted small">Perfil de riesgo</div>
             <div class="fs-5">{{ cliente.perfil_riesgo }}</div>
+            {% if indicadores %}
+            <div class="text-muted small">
+                {% if cliente.perfil_riesgo == "SIN DEFINIR" %}Estimado{% else %}Según sus activos{% endif %}:
+                {{ indicadores.perfil_calculado }}
+            </div>
+            {% endif %}
         </div></div>
     </div>
     <div class="col-md-3">
@@ -115,6 +121,28 @@
         </div></div>
     </div>
 </div>
+
+{% if indicadores %}
+<div class="card mt-4"><div class="card-body">
+    <h2 class="h5">Resumen y oportunidades</h2>
+    <p>{{ descripcion }}</p>
+
+    {% if oportunidades %}
+    <ul class="list-group list-group-flush">
+        {% for o in oportunidades %}
+        <li class="list-group-item px-0"><strong>{{ o.titulo }}.</strong> {{ o.texto }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted mb-0">No se encontraron oportunidades con las reglas actuales.</p>
+    {% endif %}
+
+    <p class="text-muted small mt-3 mb-0">
+        Estas sugerencias salen de reglas sencillas sobre los datos del portafolio. Son ideas para la conversación
+        con el cliente, no una recomendación de inversión.
+    </p>
+</div></div>
+{% endif %}
 {% endif %}
 {% endblock %}
 

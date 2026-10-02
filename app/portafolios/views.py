@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import connection
 from django.shortcuts import redirect, render
 
+from .recomendaciones import describir, oportunidades
+
 # Los archivos .sql están en la raíz del repositorio
 CARPETA_SQL = settings.BASE_DIR.parent / "sql"
 
@@ -21,6 +23,7 @@ TABLAS = [
     "v_volatilidad_tickers",
     "v_posiciones_riesgo",
     "v_modelo_riesgo",
+    "v_indicadores_cliente",
 ]
 
 
@@ -112,6 +115,9 @@ def portafolio(request):
     local = []
     internacional = []
     internacional_por_tipo = []
+    indicadores = None
+    descripcion = None
+    lista_oportunidades = []
 
     if id_cliente:
         encontrados = consultar("SELECT * FROM v_clientes WHERE id_sistema_cliente = %s", [id_cliente])
@@ -142,6 +148,15 @@ def portafolio(request):
             ORDER BY valor DESC
         """, [id_cliente])
 
+        # Descripción y oportunidades (necesitan los precios de mercado del modelo)
+        hay_precios = consultar("SELECT COUNT(*) AS filas FROM precios_mercado")[0]["filas"] > 0
+        if cliente and hay_precios:
+            indicadores = consultar(
+                "SELECT * FROM v_indicadores_cliente WHERE id_sistema_cliente = %s", [id_cliente]
+            )[0]
+            descripcion = describir(indicadores)
+            lista_oportunidades = oportunidades(indicadores)
+
     # Datos para los gráficos (Chart.js los lee desde la plantilla)
     graficos = {
         "local": {
@@ -161,6 +176,9 @@ def portafolio(request):
         "local": local,
         "internacional": internacional,
         "graficos": graficos,
+        "indicadores": indicadores,
+        "descripcion": descripcion,
+        "oportunidades": lista_oportunidades,
         # alto de cada gráfico según el número de barras
         "alto_local": 70 + 38 * len(local),
         "alto_internacional": 70 + 38 * len(internacional_por_tipo),
