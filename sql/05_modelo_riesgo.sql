@@ -42,7 +42,9 @@ WITH cambios AS (
 SELECT ticker,
        COUNT(cambio_diario) AS dias,
        STDDEV(cambio_diario) * SQRT(252) AS volatilidad,
-       (ARRAY_AGG(precio ORDER BY fecha DESC))[1] / (ARRAY_AGG(precio ORDER BY fecha))[1] - 1 AS rendimiento
+       (ARRAY_AGG(precio ORDER BY fecha DESC))[1] / (ARRAY_AGG(precio ORDER BY fecha))[1] - 1 AS rendimiento,
+       MIN(fecha) AS desde,
+       MAX(fecha) AS hasta
 FROM cambios
 GROUP BY ticker;
 
@@ -53,7 +55,8 @@ GROUP BY ticker;
 --    Como entre viernes y lunes pasan tres días, la volatilidad queda un poco más alta de lo real.
 CREATE OR REPLACE VIEW v_volatilidad_locales AS
 WITH cambios AS (
-    SELECT macroactivo, cod_activo,
+    SELECT macroactivo, cod_activo, fecha,
+           LAG(fecha) OVER (PARTITION BY id_sistema_cliente, macroactivo, cod_activo ORDER BY fecha) AS fecha_anterior,
            aba / NULLIF(LAG(aba) OVER (PARTITION BY id_sistema_cliente, macroactivo, cod_activo ORDER BY fecha), 0) - 1
                AS cambio_diario
     FROM limpio_macroactivos
@@ -63,7 +66,9 @@ SELECT macroactivo,
        cod_activo,
        COUNT(cambio_diario) AS dias,
        STDDEV(cambio_diario) * SQRT(252) AS volatilidad,
-       AVG(cambio_diario) * 252 AS rendimiento
+       AVG(cambio_diario) * 252 AS rendimiento,
+       MIN(fecha_anterior) AS desde,
+       MAX(fecha) AS hasta
 FROM cambios
 WHERE ABS(cambio_diario) <= 0.01
 GROUP BY macroactivo, cod_activo;
@@ -90,7 +95,11 @@ WITH posiciones AS (
         -- si un activo tiene muy pocos días de datos, uso el promedio de su macroactivo
         COALESCE(h.volatilidad, (SELECT AVG(x.volatilidad) FROM v_volatilidad_locales x
                                  WHERE x.macroactivo = l.macroactivo)) AS volatilidad_local,
-        h.rendimiento AS rendimiento_local
+        h.rendimiento AS rendimiento_local,
+        -- nombre de la serie de saldos de este activo (se usa en sql/07_evolucion.sql)
+        l.macroactivo || '|' || COALESCE(l.cod_activo, '') AS serie_local,
+        h.desde AS desde_local,
+        h.hasta AS hasta_local
     FROM v_portafolio_local l
     LEFT JOIN tickers_locales t ON t.activo = l.activo
     LEFT JOIN v_volatilidad_locales h ON h.macroactivo = l.macroactivo
@@ -122,14 +131,20 @@ WITH posiciones AS (
              ELSE 'Activo parecido'
         END AS fuente,
         NULL AS volatilidad_local,
-        NULL AS rendimiento_local
+        NULL AS rendimiento_local,
+        NULL AS serie_local,
+        NULL AS desde_local,
+        NULL AS hasta_local
     FROM v_portafolio_internacional i
     LEFT JOIN tickers_internacionales t ON t.simbol = i.simbol
 )
 SELECT
     p.id_sistema_cliente, p.portafolio, p.nombre, p.clase, p.valor_cop, p.ticker, p.fuente,
     COALESCE(v.volatilidad, p.volatilidad_local) AS volatilidad,
-    COALESCE(v.rendimiento, p.rendimiento_local) AS rendimiento
+    COALESCE(v.rendimiento, p.rendimiento_local) AS rendimiento,
+    COALESCE(p.ticker, p.serie_local) AS serie,
+    COALESCE(v.desde, p.desde_local) AS desde,
+    COALESCE(v.hasta, p.hasta_local) AS hasta
 FROM posiciones p
 LEFT JOIN v_volatilidad_tickers v ON v.ticker = p.ticker;
 
