@@ -102,13 +102,5 @@ Los límites de cada regla (por ejemplo, desde qué porcentaje la liquidez es "a
 9. Crear las tablas que necesita Django: `python manage.py migrate`
 10. Abrir la aplicación: `python manage.py runserver` y entrar a http://127.0.0.1:8000
 
-## Avance
-
-- [x] Exploración de los datos
-- [x] Base de datos y carga
-- [x] Limpieza en SQL
-- [x] Aplicación en Django
-- [x] Modelo
-- [x] Extra: resumen y oportunidades por cliente
 
 Los datos de la prueba no están en el repositorio.
