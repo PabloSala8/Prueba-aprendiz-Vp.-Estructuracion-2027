@@ -40,6 +40,8 @@ La limpieza está en la carpeta `sql/`, en archivos numerados que se corren en o
 - `03_internacional.sql`: limpia el portafolio internacional y le pone a cada activo su tipo (bono, fondo, acción, etc.), porque el archivo no lo trae.
 - `04_portafolios.sql`: crea las vistas con el portafolio de cada cliente a su última fecha, que es lo que usa la aplicación.
 
+Los otros tres archivos no son de limpieza sino de análisis, y se explican más abajo: `05_modelo_riesgo.sql` (el modelo), `06_indicadores.sql` (indicadores para las oportunidades) y `07_evolucion.sql` (las series en el tiempo).
+
 Las filas que no pude usar no las borro, quedan en las tablas `rechazadas_macroactivos` (51 filas) y `rechazadas_internacional` (3 filas) con el motivo.
 
 Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 millones de pesos al 15 de mayo de 2024) y 12 de ellos también tienen portafolio internacional (unos 8,8 millones de dólares al 30 de mayo de 2024).
@@ -49,7 +51,7 @@ Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 mill
 La aplicación está en la carpeta `app/` y se conecta a la misma base de datos. Tiene estas páginas:
 
 - **Consultas SQL:** muestra los archivos de la carpeta `sql/`, deja ver el SQL de cada uno y ejecutarlos con un botón. También muestra cuántas filas tiene cada tabla resultante y sus primeras filas.
-- **Portafolio por cliente:** se elige un cliente y muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle. Más abajo muestra el rendimiento y la volatilidad de cada activo, con un gráfico de cómo se movieron en el tiempo, las fechas analizadas y de dónde sale cada dato (Yahoo Finance o los saldos de la prueba). Esas series se calculan en `sql/07_evolucion.sql`.
+- **Portafolio por cliente:** la lista de clientes está separada en dos grupos (los que tienen portafolio local e internacional y los que solo tienen local), ordenada de mayor a menor portafolio, y marca los clientes que tienen el ID incompleto. Al elegir un cliente muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle. Más abajo muestra el rendimiento y la volatilidad de cada activo, con un gráfico de cómo se movieron en el tiempo, las fechas analizadas y de dónde sale cada dato (Yahoo Finance o los saldos de la prueba). Esas series se calculan en `sql/07_evolucion.sql`.
 - **Riesgo vs perfil:** muestra el resultado del modelo (explicado más abajo).
 
 Los gráficos están hechos con Chart.js, que es de código abierto. Las consultas que usa la página (totales y porcentajes) también están escritas en SQL.
@@ -67,6 +69,12 @@ Cómo lo hice:
 
 Todo el cálculo está en `sql/05_modelo_riesgo.sql` y el resultado se ve en la página "Riesgo vs perfil" de la aplicación.
 
+De dónde salen los datos de mercado:
+
+- **Precios:** Yahoo Finance, descargados con la librería `yfinance`. Son precios de cierre diarios del 30 de mayo de 2023 al 30 de mayo de 2024 (un año hasta la fecha de corte del portafolio internacional), de 45 símbolos. Las acciones colombianas están con el sufijo `.CL`, por ejemplo `ECOPETROL.CL`.
+- **FICs y CDTs locales:** no tienen precio en bolsa, así que uso los saldos diarios de los mismos datos de la prueba, del 23 de noviembre de 2023 al 15 de mayo de 2024.
+- **TRM:** 3.867,02 pesos por dólar, la del 30 de mayo de 2024, tomada de datos.gov.co (Superintendencia Financiera). Está fija en el SQL.
+
 Lo que encontré: de los 29 clientes, 15 no tienen perfil definido (el modelo les sugiere uno), 3 tienen más riesgo del que dice su perfil, 6 tienen menos y 5 están alineados.
 
 Cosas a tener en cuenta:
@@ -74,6 +82,9 @@ Cosas a tener en cuenta:
 - La volatilidad de los FICs y CDTs locales sale de los saldos históricos de los clientes. Para que los aportes y retiros no cuenten como movimientos del activo, no tengo en cuenta los cambios de más de 1% en un día.
 - El promedio ponderado no tiene en cuenta que los activos se compensan entre sí (diversificación), entonces el riesgo queda un poco más alto de lo real.
 - Los límites de 5% y 10% los escogí yo comparando con ETFs de bonos y de acciones. Se pueden cambiar en el SQL.
+- Solo cerca del 11% del valor de los portafolios tiene precio propio en Yahoo Finance (acciones y ETFs). Cerca del 76% son bonos, fondos, notas estructuradas y liquidez del portafolio internacional, que no tienen precio propio: para esos uso el precio de un ETF parecido. Los precios son reales, pero la equivalencia entre el activo y el ETF la escogí yo. El 13% restante son los FICs y CDTs locales.
+- El gráfico de "activos con precio de mercado" de la página de cada cliente es una simulación: muestra cómo se habrían movido en el último año las posiciones que el cliente tiene hoy. No es su historial real, porque del portafolio internacional solo sirve la última carga.
+- Yahoo Finance es una fuente gratuita y no oficial. Sirve para un prototipo; en el banco se usaría un proveedor de precios oficial. Además hay acciones locales que casi no se negocian (ETB no cambió de precio en 166 de 258 días), y su volatilidad es poco confiable.
 
 ## Extra: resumen y oportunidades por cliente
 
@@ -101,6 +112,5 @@ Los límites de cada regla (por ejemplo, desde qué porcentaje la liquidez es "a
 8. Entrar a la carpeta de la aplicación: `cd app`
 9. Crear las tablas que necesita Django: `python manage.py migrate`
 10. Abrir la aplicación: `python manage.py runserver` y entrar a http://127.0.0.1:8000
-
 
 Los datos de la prueba no están en el repositorio.
