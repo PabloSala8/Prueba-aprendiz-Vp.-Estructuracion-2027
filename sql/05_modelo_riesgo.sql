@@ -30,24 +30,48 @@ INSERT INTO tickers_internacionales VALUES
     ('ISQWF', 'QUAL', 'Activo parecido'),     -- acciones de calidad
     ('ISVFF', 'XLV', 'Activo parecido');      -- acciones del sector salud
 
--- 1. Volatilidad anual de cada ticker
---    (desviación estándar de los cambios diarios del precio, llevada a un año)
+-- 1. Volatilidad y rendimiento de cada ticker en el año de precios descargado
+--    Volatilidad: desviación estándar de los cambios diarios del precio, llevada a un año
+--    Rendimiento: último precio contra el primero
 CREATE OR REPLACE VIEW v_volatilidad_tickers AS
 WITH cambios AS (
-    SELECT ticker,
+    SELECT ticker, fecha, precio,
            precio / LAG(precio) OVER (PARTITION BY ticker ORDER BY fecha) - 1 AS cambio_diario
     FROM precios_mercado
 )
 SELECT ticker,
        COUNT(cambio_diario) AS dias,
-       STDDEV(cambio_diario) * SQRT(252) AS volatilidad
+       STDDEV(cambio_diario) * SQRT(252) AS volatilidad,
+       (ARRAY_AGG(precio ORDER BY fecha DESC))[1] / (ARRAY_AGG(precio ORDER BY fecha))[1] - 1 AS rendimiento
 FROM cambios
 GROUP BY ticker;
 
--- 2. Todas las posiciones (locales e internacionales) en pesos, con su volatilidad
+-- 2. Volatilidad y rendimiento de los FICs y CDTs locales
+--    No tienen precio en bolsa, pero los saldos diarios de los clientes muestran cómo se mueve su valor,
+--    así que uso la misma fórmula sobre esos saldos.
+--    Los cambios de más de 1% en un día no los cuento: son aportes o retiros del cliente, no movimientos del activo.
+--    Como entre viernes y lunes pasan tres días, la volatilidad queda un poco más alta de lo real.
+CREATE OR REPLACE VIEW v_volatilidad_locales AS
+WITH cambios AS (
+    SELECT macroactivo, cod_activo,
+           aba / NULLIF(LAG(aba) OVER (PARTITION BY id_sistema_cliente, macroactivo, cod_activo ORDER BY fecha), 0) - 1
+               AS cambio_diario
+    FROM limpio_macroactivos
+    WHERE macroactivo IN ('FICs', 'Renta Fija')
+)
+SELECT macroactivo,
+       cod_activo,
+       COUNT(cambio_diario) AS dias,
+       STDDEV(cambio_diario) * SQRT(252) AS volatilidad,
+       AVG(cambio_diario) * 252 AS rendimiento
+FROM cambios
+WHERE ABS(cambio_diario) <= 0.01
+GROUP BY macroactivo, cod_activo;
+
+-- 3. Todas las posiciones (locales e internacionales) en pesos, con su volatilidad y rendimiento
 --    Si el activo tiene precio en bolsa uso ese precio.
 --    Si no, uso un activo parecido (por ejemplo un ETF de bonos para un bono).
---    Los FICs y CDTs locales no tienen precio en bolsa: les pongo una volatilidad baja como supuesto.
+--    Para los FICs y CDTs locales uso los saldos históricos de los mismos datos.
 CREATE OR REPLACE VIEW v_posiciones_riesgo AS
 WITH posiciones AS (
     SELECT
@@ -61,13 +85,16 @@ WITH posiciones AS (
         END AS ticker,
         CASE WHEN t.ticker IS NOT NULL THEN 'Precio del activo'
              WHEN l.macroactivo = 'Renta Variable' THEN 'Activo parecido'
-             ELSE 'Supuesto'
+             ELSE 'Saldos históricos'
         END AS fuente,
-        CASE l.macroactivo WHEN 'FICs' THEN 0.02
-                           WHEN 'Renta Fija' THEN 0.01
-        END AS volatilidad_supuesta
+        -- si un activo tiene muy pocos días de datos, uso el promedio de su macroactivo
+        COALESCE(h.volatilidad, (SELECT AVG(x.volatilidad) FROM v_volatilidad_locales x
+                                 WHERE x.macroactivo = l.macroactivo)) AS volatilidad_local,
+        h.rendimiento AS rendimiento_local
     FROM v_portafolio_local l
     LEFT JOIN tickers_locales t ON t.activo = l.activo
+    LEFT JOIN v_volatilidad_locales h ON h.macroactivo = l.macroactivo
+                                     AND h.cod_activo IS NOT DISTINCT FROM l.cod_activo
 
     UNION ALL
 
@@ -94,17 +121,19 @@ WITH posiciones AS (
              WHEN i.tipo_activo IN ('Acción', 'ETF') THEN 'Precio del activo'
              ELSE 'Activo parecido'
         END AS fuente,
-        NULL AS volatilidad_supuesta
+        NULL AS volatilidad_local,
+        NULL AS rendimiento_local
     FROM v_portafolio_internacional i
     LEFT JOIN tickers_internacionales t ON t.simbol = i.simbol
 )
 SELECT
     p.id_sistema_cliente, p.portafolio, p.nombre, p.clase, p.valor_cop, p.ticker, p.fuente,
-    COALESCE(v.volatilidad, p.volatilidad_supuesta) AS volatilidad
+    COALESCE(v.volatilidad, p.volatilidad_local) AS volatilidad,
+    COALESCE(v.rendimiento, p.rendimiento_local) AS rendimiento
 FROM posiciones p
 LEFT JOIN v_volatilidad_tickers v ON v.ticker = p.ticker;
 
--- 3. Riesgo de cada cliente y comparación con su perfil
+-- 4. Riesgo de cada cliente y comparación con su perfil
 --    El riesgo del portafolio es el promedio de las volatilidades, ponderado por el valor de cada posición.
 --    Menos de 5% lo tomo como conservador, entre 5% y 10% moderado y más de 10% agresivo.
 CREATE OR REPLACE VIEW v_modelo_riesgo AS

@@ -10,7 +10,8 @@ SELECT
     COALESCE(a.activo, 'No identificado' || COALESCE(' (' || m.cod_activo || ')', '')) AS activo,
     m.aba,
     b.banca,
-    p.perfil_riesgo
+    p.perfil_riesgo,
+    m.cod_activo
 FROM limpio_macroactivos m
 LEFT JOIN limpio_activos a ON a.cod_activo = m.cod_activo
 LEFT JOIN limpio_banca b ON b.cod_banca = m.cod_banca
