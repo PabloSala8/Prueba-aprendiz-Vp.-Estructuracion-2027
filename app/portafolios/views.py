@@ -93,7 +93,19 @@ def consultas(request):
 
 def portafolio(request):
     """Página para elegir un cliente y ver su portafolio local e internacional."""
-    clientes = consultar("SELECT * FROM v_clientes ORDER BY id_sistema_cliente")
+    # Los IDs en notación científica (con E+) vienen incompletos desde el archivo original
+    clientes = consultar("""
+        SELECT *, id_sistema_cliente LIKE '%E+%' AS id_incompleto
+        FROM v_clientes
+        ORDER BY total_usd DESC, total_cop DESC
+    """)
+    # Todos los clientes tienen portafolio local, y algunos tienen además internacional
+    con_internacional = [c for c in clientes if c["total_usd"] > 0]
+    solo_local = [c for c in clientes if c["total_usd"] == 0]
+    grupos = [
+        ("Con portafolio local e internacional", con_internacional),
+        ("Solo portafolio local", solo_local),
+    ]
     id_cliente = request.GET.get("cliente")
 
     cliente = None
@@ -143,7 +155,7 @@ def portafolio(request):
     }
 
     return render(request, "portafolios/portafolio.html", {
-        "clientes": clientes,
+        "grupos": grupos,
         "id_cliente": id_cliente,
         "cliente": cliente,
         "local": local,

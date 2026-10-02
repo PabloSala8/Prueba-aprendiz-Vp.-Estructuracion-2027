@@ -9,12 +9,20 @@
     <div class="col-auto">
         <select name="cliente" class="form-select" onchange="this.form.submit()">
             <option value="">Seleccione un cliente</option>
-            {% for c in clientes %}
-            <option value="{{ c.id_sistema_cliente }}" {% if c.id_sistema_cliente == id_cliente %}selected{% endif %}>
-                {{ c.id_sistema_cliente }} · {{ c.banca }} · {{ c.perfil_riesgo }}
-            </option>
+            {% for nombre_grupo, lista in grupos %}
+            <optgroup label="{{ nombre_grupo }} ({{ lista|length }})">
+                {% for c in lista %}
+                <option value="{{ c.id_sistema_cliente }}" {% if c.id_sistema_cliente == id_cliente %}selected{% endif %}>
+                    {{ c.id_sistema_cliente }}{% if c.id_incompleto %} (ID incompleto){% endif %} · {{ c.banca }} · {{ c.perfil_riesgo }}
+                </option>
+                {% endfor %}
+            </optgroup>
             {% endfor %}
         </select>
+        <div class="form-text">
+            Cada opción muestra el ID del cliente, su banca y su perfil de riesgo, ordenados de mayor a menor portafolio.
+            Los que dicen "ID incompleto" vienen en notación científica desde el archivo original y no se pueden recuperar.
+        </div>
     </div>
 </form>
 
