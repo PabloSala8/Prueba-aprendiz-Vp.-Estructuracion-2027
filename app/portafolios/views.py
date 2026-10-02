@@ -25,6 +25,8 @@ TABLAS = [
     "v_posiciones_riesgo",
     "v_modelo_riesgo",
     "v_indicadores_cliente",
+    "v_cambios_diarios",
+    "v_evolucion_cliente",
 ]
 
 
@@ -119,6 +121,8 @@ def portafolio(request):
     indicadores = None
     descripcion = None
     lista_oportunidades = []
+    riesgo_posiciones = []
+    evolucion = []
 
     if id_cliente:
         encontrados = consultar("SELECT * FROM v_clientes WHERE id_sistema_cliente = %s", [id_cliente])
@@ -158,6 +162,48 @@ def portafolio(request):
             descripcion = describir(indicadores)
             lista_oportunidades = oportunidades(indicadores)
 
+            # Volatilidad y rendimiento de cada posición, con el periodo y la fuente de los datos
+            riesgo_posiciones = consultar("""
+                SELECT nombre, ticker, fuente, desde, hasta,
+                       ROUND(100 * valor_cop / SUM(valor_cop) OVER (), 1) AS peso,
+                       ROUND((volatilidad * 100)::numeric, 1) AS volatilidad,
+                       ROUND((rendimiento * 100)::numeric, 1) AS rendimiento
+                FROM v_posiciones_riesgo
+                WHERE id_sistema_cliente = %s
+                ORDER BY valor_cop DESC
+            """, [id_cliente])
+
+            # Evolución en el tiempo: una serie para los activos con precio en Yahoo Finance
+            # y otra para los FICs y CDTs locales (que salen de los saldos de la prueba)
+            for origen in ["Yahoo Finance", "Saldos de la prueba"]:
+                puntos = consultar("""
+                    SELECT fecha, ROUND(indice::numeric, 2) AS indice
+                    FROM v_evolucion_cliente
+                    WHERE id_sistema_cliente = %s AND origen = %s
+                    ORDER BY fecha
+                """, [id_cliente, origen])
+                if not puntos:
+                    continue
+
+                # posiciones del cliente que entran en esta serie
+                if origen == "Yahoo Finance":
+                    posiciones = [p for p in riesgo_posiciones if p["ticker"]]
+                else:
+                    posiciones = [p for p in riesgo_posiciones if not p["ticker"]]
+                desde = min(p["desde"] for p in posiciones)
+
+                evolucion.append({
+                    "origen": origen,
+                    "id_canvas": "grafico-evolucion-" + str(len(evolucion) + 1),
+                    "desde": desde,
+                    "hasta": puntos[-1]["fecha"],
+                    "valor_final": puntos[-1]["indice"],
+                    "cobertura": sum(p["peso"] for p in posiciones),
+                    # el primer punto es 100 en la fecha de inicio
+                    "etiquetas": [f"{desde:%d/%m/%Y}"] + [f"{p['fecha']:%d/%m/%Y}" for p in puntos],
+                    "valores": [100.0] + [float(p["indice"]) for p in puntos],
+                })
+
     # Datos para los gráficos (Chart.js los lee desde la plantilla)
     graficos = {
         "local": {
@@ -168,6 +214,10 @@ def portafolio(request):
             "etiquetas": [fila["tipo_activo"] for fila in internacional_por_tipo],
             "valores": [float(fila["valor"]) for fila in internacional_por_tipo],
         },
+        "evolucion": [
+            {"id_canvas": e["id_canvas"], "etiquetas": e["etiquetas"], "valores": e["valores"]}
+            for e in evolucion
+        ],
     }
 
     return render(request, "portafolios/portafolio.html", {
@@ -180,6 +230,8 @@ def portafolio(request):
         "indicadores": indicadores,
         "descripcion": descripcion,
         "oportunidades": lista_oportunidades,
+        "riesgo_posiciones": riesgo_posiciones,
+        "evolucion": evolucion,
         # alto de cada gráfico según el número de barras
         "alto_local": 70 + 38 * len(local),
         "alto_internacional": 70 + 38 * len(internacional_por_tipo),

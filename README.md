@@ -49,7 +49,7 @@ Después de la limpieza quedan 29 clientes con portafolio local (unos 5.096 mill
 La aplicación está en la carpeta `app/` y se conecta a la misma base de datos. Tiene estas páginas:
 
 - **Consultas SQL:** muestra los archivos de la carpeta `sql/`, deja ver el SQL de cada uno y ejecutarlos con un botón. También muestra cuántas filas tiene cada tabla resultante y sus primeras filas.
-- **Portafolio por cliente:** se elige un cliente y muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle.
+- **Portafolio por cliente:** se elige un cliente y muestra su portafolio local en pesos y su portafolio internacional en dólares, cada uno con su fecha de corte, un gráfico de barras y una tabla con el detalle. Más abajo muestra el rendimiento y la volatilidad de cada activo, con un gráfico de cómo se movieron en el tiempo, las fechas analizadas y de dónde sale cada dato (Yahoo Finance o los saldos de la prueba). Esas series se calculan en `sql/07_evolucion.sql`.
 - **Riesgo vs perfil:** muestra el resultado del modelo (explicado más abajo).
 
 Los gráficos están hechos con Chart.js, que es de código abierto. Las consultas que usa la página (totales y porcentajes) también están escritas en SQL.

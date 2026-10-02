@@ -124,6 +124,83 @@
 
 {% if indicadores %}
 <div class="card mt-4"><div class="card-body">
+    <h2 class="h5">Rendimiento y volatilidad</h2>
+    <p>
+        La <strong>volatilidad</strong> mide qué tanto sube y baja el valor de un activo de un día a otro.
+        Se calcula con los cambios diarios del precio: se saca su desviación estándar y se lleva a un año
+        (multiplicando por la raíz de 252, que son los días hábiles de un año). Sirve para medir el riesgo:
+        dos activos pueden rendir lo mismo, pero el que más se mueve es el más riesgoso.
+        El <strong>rendimiento</strong> es cuánto cambió el precio entre el primer y el último día del periodo.
+    </p>
+    <p>
+        La volatilidad de este portafolio es de <strong>{{ indicadores.volatilidad }}% al año</strong>.
+        Es el promedio de las volatilidades de sus activos según el peso de cada uno, sumando lo local y lo internacional.
+        Por eso su perfil estimado es <strong>{{ indicadores.perfil_calculado }}</strong>
+        (menos de 5% conservador, entre 5% y 10% moderado, más de 10% agresivo).
+    </p>
+
+    <div class="row g-4 mb-3">
+        {% for e in evolucion %}
+        <div class="{% if evolucion|length == 1 %}col-12{% else %}col-lg-6{% endif %}">
+            {% if e.origen == "Yahoo Finance" %}
+            <h3 class="h6 mb-0">Activos con precio de mercado</h3>
+            {% else %}
+            <h3 class="h6 mb-0">FICs y CDTs locales</h3>
+            {% endif %}
+            <p class="text-muted small mb-2">
+                Cuánto valdrían 100 invertidos el {{ e.desde|date:"d/m/Y" }}:
+                {{ e.valor_final }} el {{ e.hasta|date:"d/m/Y" }}
+            </p>
+            <div style="height: 240px;"><canvas id="{{ e.id_canvas }}"></canvas></div>
+            <p class="text-muted small mt-2 mb-0">
+                {% if e.origen == "Yahoo Finance" %}
+                Fuente: precios de cierre diarios de Yahoo Finance, del {{ e.desde|date:"d/m/Y" }} al {{ e.hasta|date:"d/m/Y" }}.
+                Representa el {{ e.cobertura }}% del portafolio.
+                Es una simulación con las posiciones y los pesos que el cliente tiene hoy, no su historial real.
+                {% else %}
+                Fuente: saldos diarios de los datos de la prueba, del {{ e.desde|date:"d/m/Y" }} al {{ e.hasta|date:"d/m/Y" }}.
+                Representa el {{ e.cobertura }}% del portafolio.
+                No cuenta los aportes ni los retiros (cambios de más de 1% en un día).
+                {% endif %}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="table-responsive">
+    <table class="table table-sm small">
+        <thead>
+            <tr>
+                <th>Activo</th><th class="text-end">Peso</th><th class="text-end">Volatilidad</th>
+                <th class="text-end">Rendimiento</th><th>Periodo analizado</th><th>Fuente de los datos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in riesgo_posiciones %}
+            <tr>
+                <td>{{ fila.nombre|truncatechars:45 }}</td>
+                <td class="text-end">{{ fila.peso }}%</td>
+                <td class="text-end">{{ fila.volatilidad }}%</td>
+                <td class="text-end">{{ fila.rendimiento }}%</td>
+                <td>{{ fila.desde|date:"d/m/Y" }} a {{ fila.hasta|date:"d/m/Y" }}</td>
+                <td>
+                    {% if fila.fuente == "Precio del activo" %}Yahoo Finance ({{ fila.ticker }})
+                    {% elif fila.fuente == "Activo parecido" %}Yahoo Finance, activo parecido ({{ fila.ticker }})
+                    {% else %}Saldos diarios de la prueba{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="text-muted small mb-0">
+        "Activo parecido" quiere decir que el activo no tiene precio propio en Yahoo Finance (bonos, fondos, notas
+        estructuradas, liquidez) y se usó un ETF que se comporta de forma similar.
+        En los FICs y CDTs locales el rendimiento está llevado a un año, porque los datos cubren cerca de 6 meses.
+    </p>
+</div></div>
+
+<div class="card mt-4"><div class="card-body">
     <h2 class="h5">Resumen y oportunidades</h2>
     <p>{{ descripcion }}</p>
 
@@ -192,5 +269,38 @@
 
     graficoBarras("grafico-local", datos.local.etiquetas, datos.local.valores, "COP");
     graficoBarras("grafico-internacional", datos.internacional.etiquetas, datos.internacional.valores, "USD");
+
+    // Gráfico de línea con la evolución en el tiempo (empieza en 100)
+    function graficoLinea(idCanvas, etiquetas, valores) {
+        new Chart(document.getElementById(idCanvas), {
+            type: "line",
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    data: valores,
+                    borderColor: "#2a78d6",
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHitRadius: 10,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (punto) => "Valor: " + punto.parsed.y.toLocaleString("es-CO") } },
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0 } },
+                    y: { title: { display: true, text: "Valor (inicio = 100)" } },
+                },
+            },
+        });
+    }
+
+    for (const serie of datos.evolucion) {
+        graficoLinea(serie.id_canvas, serie.etiquetas, serie.valores);
+    }
 </script>
 {% endblock %}
