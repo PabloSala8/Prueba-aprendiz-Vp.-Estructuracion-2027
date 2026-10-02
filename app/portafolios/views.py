@@ -21,6 +21,7 @@ TABLAS = [
     "v_clientes",
     "precios_mercado",
     "v_volatilidad_tickers",
+    "v_volatilidad_locales",
     "v_posiciones_riesgo",
     "v_modelo_riesgo",
     "v_indicadores_cliente",
@@ -209,7 +210,8 @@ def riesgo(request):
             detalle = consultar("""
                 SELECT portafolio, nombre, clase, ticker, fuente,
                        ROUND(100 * valor_cop / SUM(valor_cop) OVER (), 1) AS peso,
-                       ROUND((volatilidad * 100)::numeric, 1) AS volatilidad
+                       ROUND((volatilidad * 100)::numeric, 1) AS volatilidad,
+                       ROUND((rendimiento * 100)::numeric, 1) AS rendimiento
                 FROM v_posiciones_riesgo
                 WHERE id_sistema_cliente = %s
                 ORDER BY valor_cop DESC

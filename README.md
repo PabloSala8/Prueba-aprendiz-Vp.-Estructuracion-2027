@@ -61,7 +61,7 @@ En la exploración vi que hay clientes con mucha plata invertida y con el perfil
 Cómo lo hice:
 
 1. Descargué de Yahoo Finance un año de precios de los activos de los portafolios (`scripts/descargar_precios.py`), incluyendo las acciones colombianas.
-2. Con esos precios calculé la volatilidad anual de cada activo. Para los activos que no tienen precio en bolsa (bonos, fondos, notas estructuradas) usé un ETF parecido.
+2. Con esos precios calculé la volatilidad anual de cada activo, que es qué tanto sube y baja su valor (no es lo mismo que el rendimiento). Para los activos internacionales que no tienen precio en bolsa (bonos, fondos, notas estructuradas) usé un ETF parecido. Para los FICs y CDTs locales la calculé con los saldos diarios de los mismos datos de la prueba.
 3. El riesgo del portafolio es el promedio de esas volatilidades según el peso de cada posición, sumando lo local y lo internacional.
 4. Menos de 5% lo tomo como conservador, entre 5% y 10% como moderado y más de 10% como agresivo, y eso lo comparo con el perfil registrado.
 
@@ -71,7 +71,7 @@ Lo que encontré: de los 29 clientes, 15 no tienen perfil definido (el modelo le
 
 Cosas a tener en cuenta:
 
-- Los FICs y CDTs locales no tienen precio en bolsa, así que les puse una volatilidad baja como supuesto (2% y 1%).
+- La volatilidad de los FICs y CDTs locales sale de los saldos históricos de los clientes. Para que los aportes y retiros no cuenten como movimientos del activo, no tengo en cuenta los cambios de más de 1% en un día.
 - El promedio ponderado no tiene en cuenta que los activos se compensan entre sí (diversificación), entonces el riesgo queda un poco más alto de lo real.
 - Los límites de 5% y 10% los escogí yo comparando con ETFs de bonos y de acciones. Se pueden cambiar en el SQL.
 

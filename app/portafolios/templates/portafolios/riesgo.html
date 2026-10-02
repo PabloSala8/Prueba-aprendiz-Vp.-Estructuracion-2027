@@ -74,14 +74,17 @@
 <div class="card mt-4" id="detalle"><div class="card-body">
     <h2 class="h5 mb-0">Detalle del cliente {{ id_cliente }}</h2>
     <p class="text-muted small">
-        Cada posición con su peso en el portafolio y la volatilidad que se usó.
+        Cada posición con su peso en el portafolio, la volatilidad que se usó y el rendimiento del año.
+        La volatilidad dice cuánto sube y baja el valor del activo; el rendimiento, cuánto ganó.
+        En los FICs y CDTs locales los dos salen de los saldos históricos de los clientes (rendimiento anualizado).
         <a href="{% url 'portafolio' %}?cliente={{ id_cliente|urlencode }}">Ver su portafolio</a>
     </p>
     <table class="table table-sm small">
         <thead>
             <tr>
                 <th>Portafolio</th><th>Activo</th><th>Clase</th><th class="text-end">Peso</th>
-                <th class="text-end">Volatilidad</th><th>Ticker usado</th><th>De dónde sale</th>
+                <th class="text-end">Volatilidad</th><th class="text-end">Rendimiento</th>
+                <th>Ticker usado</th><th>De dónde sale</th>
             </tr>
         </thead>
         <tbody>
@@ -92,6 +95,7 @@
                 <td>{{ fila.clase }}</td>
                 <td class="text-end">{{ fila.peso }}%</td>
                 <td class="text-end">{{ fila.volatilidad }}%</td>
+                <td class="text-end">{% if fila.rendimiento is not None %}{{ fila.rendimiento }}%{% endif %}</td>
                 <td>{{ fila.ticker|default_if_none:"" }}</td>
                 <td>{{ fila.fuente }}</td>
             </tr>
